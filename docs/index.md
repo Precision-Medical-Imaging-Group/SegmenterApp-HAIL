@@ -4,9 +4,9 @@ layout: default
 
 **I have read the instructions and agree with the terms.** [Return to the application](https://hail.hope4kids.io/).
 
-The **Pediatric Brain Tumor Segmenter** is a free, open-source web-based application
+The **Brain Harmonzation Tool (HAIL)** is a free, open-source web-based application
 designed at [Children's National Hospital](https://www.childrensnational.org/) 
-for the segmentation and analysis of pediatric brain tumors in magnetic resonance imaging (MRI). 
+for the harmonization of brain magnetic resonance imaging (MRI). 
 Developed in Python, this software aims to provide precise quantitative analysis 
 of pediatric brain MRI, to support clinical decision-making in diagnosis and prognosis.  
 
@@ -19,29 +19,23 @@ well-established international Brain Tumor Segmentation Challenge
 
 # Usage
 
-This software currently requires four MRI sequences: native pre-contrast T1-weighted (t1n), 
-contrast enhanced T1-weighted (t1c), native T2-weighted (t2w), and 
-T2-weighted fluid attenuated inversion recovery (t2f). These sequences should be 
+This software currently functions on the the t1 MRI sequences: native pre-contrast T1-weighted (t1n) and  
+contrast enhanced T1-weighted (t1c). These sequences should be 
 uploaded in NIfTI format (*i.e.*, **.nii.gz**). Before uploading, 
 we strongly recommend performing **de-identification** to remove any protected 
 health information, including **defacing** if necessary. 
 
-**Pre-processing** in the Segmenter is under development. At this time, 
-we expect users to follow the standardized ["BraTS Pipeline"](https://arxiv.org/pdf/2404.15009) 
-pre-processing, which includes co-registration of four sequences, and resampling to isotropic 1 mm resolution.  
-Public tools such as the Cancer Imaging Phenomics Toolkit ([CaPTk](https://github.com/CBICA/CaPTk)) 
-and Federated Tumor Segmentation ([FeTS](https://fets-ai.github.io/Front-End/process_data)) 
-toolkits can be used for this purpose.  
+**Pre-processing** in the harmonization is under development. At this time, 
+we expect users to  resample the inputs to isotropic 1 mm resolution of 192x224x192.  
 
-Once the MRI sequences are uploaded, simply click the **Start Segmentation** button 
-to generate segmentation and volumetric measurements in the **Status** box. 
-The process typically takes around 8 minutes. Afterward, you can choose an MRI 
-sequence to visualize both the image and the segmentation in axial, coronal, and sagittal views 
-using the interactive **Sliders**. Segmentation results can be downloaded in 
-NIfTI format by clicking the **Download Segmentation File** button.  
+Once the MRI sequences are uploaded, select the uploaded modality from the dropdown and click the **Start Harmonization** button. 
+The process typically takes around 8 minutes. Afterward, the MRI 
+sequence before and after harmonization is visualized on axial views 
+using the interactive **Sliders**. Harmonization results can be downloaded in 
+NIfTI format by clicking the **Download Harmonized File** button.  
 
 For **demonstration** purposes, we provide sample cases at the bottom of the page. 
-Select one and click the **Start Segmentation** button to see how the software works.  
+Select one and click the **Start Harmonization** button to see how the software works.  
 
 # Source Code
 
