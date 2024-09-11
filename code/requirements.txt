@@ -1,5 +1,5 @@
 nibabel==5.2.1
-numpy==2.0.1
+numpy==1.26.4
 scipy==1.14.0
 torchio==0.19.9
 scikit-image==0.24.0

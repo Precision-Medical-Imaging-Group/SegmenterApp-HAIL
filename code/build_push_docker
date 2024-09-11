@@ -1,0 +1,3 @@
+tag=20240911
+docker build -t aparida12/hail2024:"$tag" .
+docker push aparida12/hail2024:"$tag"

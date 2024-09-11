@@ -51,7 +51,6 @@ def obtain_single_image(image_path, bg_removal=True):
                  112 - n_slc // 2:112 + n_slc // 2 + n_slc % 2] = image_vol
     return ToTensor()(image_padded), image_obj.header, thresh
 
-
 def load_source_images(image_paths, bg_removal=True):
     source_images = []
     image_header = None
@@ -70,8 +69,8 @@ def main(args=None):
     parser.add_argument('--target-eta', type=float, nargs=2, action='append', default=[])
     parser.add_argument('--norm-val', type=float, action='append', default=[])
     parser.add_argument('--out-path', type=Path, action='append', required=True)
-    parser.add_argument('--harmonization-model', type=Path, required=True)
-    parser.add_argument('--fusion-model', type=Path)
+    parser.add_argument('--harmonization-model', type=Path, default=Path('/tmp/model_weights/harmonization.pt'))
+    parser.add_argument('--fusion-model', type=Path, default=Path('/tmp/model_weights/fusion.pt'))
     parser.add_argument('--beta-dim', type=int, default=5)
     parser.add_argument('--theta-dim', type=int, default=2)
     parser.add_argument('--save-intermediate', action='store_true', default=False)
