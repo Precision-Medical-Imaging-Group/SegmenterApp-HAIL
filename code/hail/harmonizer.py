@@ -60,14 +60,11 @@ def load_source_images(image_paths, bg_removal=True):
     return source_images, image_header
 
 
-def main(args=None):
-    args = sys.argv[1:] if args is None else args
+if __name__ == '__main__':
+    #args = sys.argv[1:] if args is None else args
     parser = argparse.ArgumentParser(description='Harmonization Across Imaging Location(HAIL)')
     parser.add_argument('--in-path', type=Path, action='append', required=True)
     parser.add_argument('--target-image', type=Path, action='append', default=[])
-    parser.add_argument('--target-theta', type=float, nargs=2, action='append', default=[])
-    parser.add_argument('--target-eta', type=float, nargs=2, action='append', default=[])
-    parser.add_argument('--norm-val', type=float, action='append', default=[])
     parser.add_argument('--out-path', type=Path, action='append', required=True)
     parser.add_argument('--harmonization-model', type=Path, default=Path('/tmp/model_weights/harmonization.pt'))
     parser.add_argument('--fusion-model', type=Path, default=Path('/tmp/model_weights/fusion.pt'))
@@ -79,7 +76,9 @@ def main(args=None):
     parser.add_argument('--gpu-id', type=int, default=0)
     parser.add_argument('--num-batches', type=int, default=4)
 
-    args = parser.parse_args(args)
+    args = parser.parse_args()
+    #args = parser.parse_args(args)
+    print(args)
 
     text_div = '=' * 10
     print(f'{text_div} BEGIN HARMONIZATION {text_div}')
@@ -92,37 +91,8 @@ def main(args=None):
         else:
             setattr(args, argname, getattr(args, argname).resolve())
 
-    # ==== SET DEFAULT FOR NORM/ETA ====
-    if len(args.target_theta) > 0 and len(args.target_eta) == 0:
-        args.target_eta = [[0.3, 0.5]]
-    if len(args.target_theta) > 0 and len(args.norm_val) == 0:
-        args.norm_val = [1000]
-
-    # ==== CHECK CONDITIONS OF INPUT ARGUMENTS ====
-    if not ((len(args.target_image) > 0) ^ (len(args.target_theta) > 0)):
-        parser.error("'--target-image' or '--target-theta' value should be provided.")
-
-    if 0 < len(args.target_image) != len(args.out_path):
-        parser.error("Number of '--out-path' and '--target-image' options should be the same.")
-
-    if len(args.target_theta) == 1 and len(args.target_eta) > 1:
-        args.target_theta = args.target_theta * len(args.target_eta)
-
-    if len(args.target_theta) > 1 and len(args.target_eta) == 1:
-        args.target_eta = args.target_eta * len(args.target_theta)
-
-    if len(args.target_theta) > 1 and len(args.norm_val) == 1:
-        args.norm_val = args.norm_val * len(args.target_theta)
-
-    if 0 < len(args.target_theta) != len(args.target_eta):
-        parser.error("Number of '--target-theta' and '--target-eta' options should be the same.")
-
-    if 0 < len(args.target_theta) != len(args.norm_val):
-        parser.error("Number of '--target-theta' and '--norm-val' options should be the same.")
-
-    if 0 < len(args.target_theta) != len(args.out_path):
-        parser.error("Number of '--target-theta' and '--out-path' options should be the same.")
-
+    if args.save_intermediate:
+        mkdir_p(args.intermediate_out_dir)
 
     # ==== INITIALIZE MODEL ====
     hail = HAIL(beta_dim=args.beta_dim,
@@ -135,32 +105,27 @@ def main(args=None):
     source_images, image_header = load_source_images(args.in_path, args.bg_removal)
 
     # ==== LOAD TARGET IMAGES IF PROVIDED ====
-    if len(args.target_image) > 0:
-        target_images, norm_vals = [], []
-        for target_image_path, out_path in zip(args.target_image, args.out_path):
-            target_image_tmp, tmp_header, norm_val = obtain_single_image(target_image_path, args.bg_removal)
-            target_images.append(target_image_tmp.permute(2, 1, 0).permute(0, 2, 1).flip(1)[100:120, ...])
-            norm_vals.append(norm_val)
-            if args.save_intermediate:
-                out_prefix = out_path.name.replace('.nii.gz', '')
-                save_img = target_image_tmp.permute(1, 2, 0).numpy()[112 - 96:112 + 96, :, 112 - 96:112 + 96]
-                target_obj = nib.Nifti1Image(save_img * norm_val, None, tmp_header)
-                target_obj.to_filename(args.intermediate_out_dir / f'{out_prefix}_target.nii.gz')
+   
+    target_images, norm_vals = [], []
+    for target_image_path, out_path in zip(args.target_image, args.out_path):
+        target_image_tmp, tmp_header, norm_val = obtain_single_image(target_image_path, args.bg_removal)
+        target_images.append(target_image_tmp.permute(2, 1, 0).permute(0, 2, 1).flip(1)[100:120, ...])
+        norm_vals.append(norm_val)
         if args.save_intermediate:
-            out_prefix = args.out_path[0].name.replace('.nii.gz', '')
-            with open(args.intermediate_out_dir / f'{out_prefix}_targetnorms.txt', 'w') as fp:
-                fp.write('image,norm_val\n')
-                for i, norm_val in enumerate(norm_vals):
-                    fp.write(f'{i},{norm_val:.6f}\n')
-            np.savetxt(args.intermediate_out_dir / f'{out_prefix}_targetnorms.txt', norm_vals)
-        target_theta = None
-        target_eta = None
-    else:
-        target_images = None
-        target_theta = torch.as_tensor(args.target_theta, dtype=torch.float32)
-        target_eta = torch.as_tensor(args.target_eta, dtype=torch.float32)
-        norm_vals = args.norm_val
-
+            out_prefix = out_path.name.replace('.nii.gz', '')
+            save_img = target_image_tmp.permute(1, 2, 0).numpy()[112 - 96:112 + 96, :, 112 - 96:112 + 96]
+            target_obj = nib.Nifti1Image(save_img * norm_val, None, tmp_header)
+            target_obj.to_filename(args.intermediate_out_dir / f'{out_prefix}_target.nii.gz')
+    if args.save_intermediate:
+        out_prefix = args.out_path[0].name.replace('.nii.gz', '')
+        with open(args.intermediate_out_dir / f'{out_prefix}_targetnorms.txt', 'w') as fp:
+            fp.write('image,norm_val\n')
+            for i, norm_val in enumerate(norm_vals):
+                fp.write(f'{i},{norm_val:.6f}\n')
+        np.savetxt(args.intermediate_out_dir / f'{out_prefix}_targetnorms.txt', norm_vals)
+    target_theta = None
+    target_eta = None
+    
     # ===== BEGIN HARMONIZATION=====
     hail.harmonize(
         source_images=[image.permute(2, 0, 1) for image in source_images],

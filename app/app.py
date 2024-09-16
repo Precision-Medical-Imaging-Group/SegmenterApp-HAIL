@@ -108,7 +108,7 @@ with gr.Blocks() as demo:
 
     gr.HTML(value=f"<center><font size='6'><bold> Harmonization Across Imaging Locations (HAIL)</bold></font></center>")
     gr.HTML(value=f"<p style='margin-top: 1rem, margin-bottom: 1rem'> <img src='{logo.logo}' alt='Childrens National Logo' style='display: inline-block'/></p>")
-    gr.HTML(value=f"<justify><font size='4'> Welcome to the pediatric brain tumor segmenter. Please read the <a href='https://precision-medical-imaging-group.github.io/SegmenterApp-Segmenter-Peds/'>instructions</a> before using the application. </font></justify>")
+    gr.HTML(value=f"<justify><font size='4'> Welcome to the pediatric brain tumor segmenter. Please read the <a href='https://precision-medical-imaging-group.github.io/SegmenterApp-HAIL/'>instructions</a> before using the application. </font></justify>")
     with gr.Row():
  
         image_t1 = gr.File(label="upload t1 image to be harmonized:", file_types=["nii.gz"])
