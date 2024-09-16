@@ -7,15 +7,7 @@ layout: default
 The **Brain Harmonzation Tool (HAIL)** is a free, open-source web-based application
 designed at [Children's National Hospital](https://www.childrensnational.org/) 
 for the harmonization of brain magnetic resonance imaging (MRI). 
-Developed in Python, this software aims to provide precise quantitative analysis 
-of pediatric brain MRI, to support clinical decision-making in diagnosis and prognosis.  
-
-With its user-friendly interface, the Segmenter provides automated segmentation 
-and volumetric measurements within minutes after uploading the required four MRI sequences. 
-This software provides **state-of-the-art performance** powered by our benchmarked 
-segmentation model, which was the **top-performing model** in the pediatric competition of the 
-well-established international Brain Tumor Segmentation Challenge 
-[BraTS2023](https://www.synapse.org/Synapse:syn51156910/wiki/627802).  
+Developed in Python, this software aims to be used as preprocssing tool to provide precise quantitative analysis of brain MRI, to support clinical decision-making in diagnosis and prognosis.  
 
 # Usage
 
