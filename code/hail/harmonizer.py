@@ -140,3 +140,4 @@ if __name__ == '__main__':
         save_intermediate=args.save_intermediate,
         intermediate_out_dir=args.intermediate_out_dir,
     )
+    print(f'{text_div} END HARMONIZATION {text_div}')

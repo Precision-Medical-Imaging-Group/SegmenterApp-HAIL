@@ -23,12 +23,21 @@ def run_inference(image_t1, image_template):
 
     input_path = Path(f'/tmp/peds-app/{DUMMY_DIR}')
     os.makedirs(input_path, exist_ok=True)
-    output_folder = Path('./outs')
+    # rename the files to dummy names
+    subprocess.run(f"cp {image_t1} {input_path / DUMMY_FILE_NAMES['t1']}", shell=True)
+    subprocess.run(f"cp {image_template} {input_path / DUMMY_FILE_NAMES['template']}", shell=True)
+    
+    output_folder = Path('./outs').resolve()
     os.makedirs(output_folder, exist_ok=True)
     output_path = output_folder / f'harm_{Path(image_t1).name}'
-    fake_output_path = output_folder / f'{DUMMY_DIR}.nii.gz'
+    
+    fake_output_name = f'{DUMMY_DIR}.nii.gz'
+    fake_output_path = output_folder / fake_output_name.replace('.nii.gz', '_harmonized_axial.nii.gz')
+    container = "aparida12/hail2024:20240911"
 
-    subprocess.run(f"cp {image_t1} {output_path}", shell=True)
+    cmd = f"docker run -v {input_path}:/data_directory -v {output_folder}:/output_directory/ {container} --in-path /data_directory/{DUMMY_FILE_NAMES['t1']} --target-image /data_directory/{DUMMY_FILE_NAMES['template']} --out-path /output_directory/{fake_output_name}"
+    subprocess.run(cmd, shell=True)
+    subprocess.run(f"mv -f {fake_output_path} {output_path}", shell=True)
 
     return image_t1, image_template, output_path
 
@@ -77,7 +86,7 @@ def render(file_to_render, x, view):
     if 'img_path' in mydict:
         img = get_img(mydict[file_to_render])
         max_render= img.shape[0 if view == 'axial' else (1 if view == 'coronal' else 2)] - 1
-        print( max_render)
+        #print( max_render)
         x = max(0, min(x, max_render))
         slice_img= render_slice(img, x, view)
         
@@ -108,7 +117,7 @@ with gr.Blocks() as demo:
 
     gr.HTML(value=f"<center><font size='6'><bold> Harmonization Across Imaging Locations (HAIL)</bold></font></center>")
     gr.HTML(value=f"<p style='margin-top: 1rem, margin-bottom: 1rem'> <img src='{logo.logo}' alt='Childrens National Logo' style='display: inline-block'/></p>")
-    gr.HTML(value=f"<justify><font size='4'> Welcome to the pediatric brain tumor segmenter. Please read the <a href='https://precision-medical-imaging-group.github.io/SegmenterApp-HAIL/'>instructions</a> before using the application. </font></justify>")
+    gr.HTML(value=f"<justify><font size='4'> Welcome to the brain MRI harmonizer HAIL. Please read the <a href='https://precision-medical-imaging-group.github.io/SegmenterApp-HAIL/'>instructions</a> before using the application. </font></justify>")
     with gr.Row():
  
         image_t1 = gr.File(label="upload t1 image to be harmonized:", file_types=["nii.gz"])
@@ -129,7 +138,8 @@ with gr.Blocks() as demo:
             btn = gr.Button("Start Harmonization")
         with gr.Column():
              gr.Button("", render=False)
-    
+    with gr.Row():
+        mask_file = gr.File(label="Download Harmonized File", height="vw" )
     gr.HTML(value=f"<justify><font size='4'> INPUT NifTi: </font></justify>")
     with gr.Row():
         height = "20vw"
@@ -151,24 +161,24 @@ with gr.Blocks() as demo:
         slider_sagittal = gr.Slider(0, 155, step=1) # max val needs to be updated by user.
         state_sagittal = gr.State(value=75)
 
-    with gr.Row():
-        mask_file = gr.File(label="Download Harmonized File", height="vw" )
-
-    # example_dir = '/home/pmilab/Abhijeet/examples/'
-    # generate_examples = glob.glob(example_dir + '*')
-    # order_list = ['-t1c.nii.gz', '-t2f.nii.gz', '-t1n.nii.gz', '-t2w.nii.gz']
-    # example_list = [[os.path.join(path, str(Path(path).name)+ending) for ending in order_list] for path in generate_examples]
+    example_dir = '/media/abhijeet/DataThunder1/BraTS2024_Data/brats2024_ped_val/harm_test_inp/'
+    example_list = [[example_dir+'reg_loving_euler.nii.gz', example_dir+'reg_preaceful_yalow.nii.gz', 'native T1'],
+                    [example_dir+'reg_preaceful_yalow.nii.gz', example_dir+'reg_practical_ellis.nii.gz', 'native T1'],
+                    [example_dir+'reg_practical_ellis.nii.gz', example_dir+'reg_loving_euler.nii.gz', 'native T1'],
+                    [example_dir+'reg_preaceful_yalow.nii.gz', example_dir+'reg_loving_euler.nii.gz', 'native T1'],
+                    [example_dir+'reg_practical_ellis.nii.gz', example_dir+'reg_preaceful_yalow.nii.gz', 'native T1'],
+                    [example_dir+'reg_loving_euler.nii.gz', example_dir+'reg_practical_ellis.nii.gz', 'native T1']]
 
     
     # # gr.HTML(value=f"<center><font size='2'> The software is provided 'as is', without any warranties or liabilities.  For research use only and not intended for medical diagnosis. We do not store or access any information uploaded to the platform. This version is v20240827.</font></center>")
-    # gr.Examples(
-    #     examples=example_list,
-    #     inputs=[image_t1c, image_t2f, image_t1n, image_t2w],
-    #     outputs=[mask_file,out_text],
-    #     fn=main_func,
-    #     cache_examples=False,
-    #     label="Preloaded BraTS 2023 examples"
-    # )
+    gr.Examples(
+        examples=example_list,
+        inputs=[image_t1, image_template,  file_to_render],
+        outputs=[mask_file],
+        fn=main_func,
+        cache_examples=False,
+        label="Preloaded examples"
+    )
     
     btn.click(fn=main_func, 
         inputs=[image_t1, image_template,  file_to_render], outputs=[mask_file],
