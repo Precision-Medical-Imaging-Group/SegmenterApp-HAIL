@@ -12,6 +12,9 @@ from network import UNet, ThetaEncoder, EtaEncoder, Patchifier, AttentionModule
 
 
 class HAIL:
+    """
+    Harmonization Across Imaging Locations (HAIL) model.
+    """
     def __init__(self, beta_dim, theta_dim, eta_dim, pretrained=None, pretrained_eta_encoder=None, gpu_id=0):
         self.beta_dim = beta_dim
         self.theta_dim = theta_dim
@@ -46,23 +49,20 @@ class HAIL:
         self.attention_module.to(self.device)
         self.patchifier.to(self.device)
 
-    def channel_aggregation(self, beta_onehot_encode):
-
-        
-        
+    def channel_aggregation(self, beta_onehot_encode: torch.Tensor) -> torch.Tensor:
         """
         Combine multi-channel one-hot encoded beta into one channel (label-encoding).
 
-        ===INPUTS===
-        * beta_onehot_encode: torch.Tensor (batch_size, self.beta_dim, image_dim, image_dim)
-            One-hot encoded beta variable. At each pixel location, only one channel will take value of 1,
-            and other channels will be 0.
-        ===OUTPUTS===
-        * beta_label_encode: torch.Tensor (batch_size, 1, image_dim, image_dim)
-            The intensity value of each pixel will be determined by the channel index with value of 1.
+        args:
+            beta_onehot_encode: torch.Tensor (batch_size, self.beta_dim, image_dim, image_dim)
+                One-hot encoded beta variable. At each pixel location, only one channel will take value of 1,
+                and other channels will be 0.
+        return: 
+
+
         """
-        batch_size = beta_onehot_encode.shape[0]
-        image_dim = beta_onehot_encode.shape[3]
+        
+        batch_size, image_dim = beta_onehot_encode.shape[0], beta_onehot_encode.shape[0:]
         value_tensor = (torch.arange(0, self.beta_dim) * 1.0).to(self.device)
         value_tensor = value_tensor.view(1, self.beta_dim, 1, 1).repeat(batch_size, 1, image_dim, image_dim)
         beta_label_encode = beta_onehot_encode * value_tensor.detach()
@@ -70,20 +70,37 @@ class HAIL:
 
 
     def harmonize(self, source_images, target_images, target_theta, target_eta, out_paths,
-                  recon_orientation, norm_vals, header=None, num_batches=4):
+                  recon_orientation, norm_vals, header=None, num_batches=4) --> [torch.Tensor | None]:
+        """
+         The main hamronization function that harmonizes the source images to the target images.
+
+        Args:
+            source_images (List[torch.Tensor]): list of source images
+            target_images (List[torch.Tensor]): list of target images
+            target_theta (List[torch.Tensor]): list of target theta values
+            target_eta (List[torch.Tensor]): list of target eta values
+            out_paths (List[Path]): list of output paths
+            recon_orientation (str): orientation of the reconstructed image
+            norm_vals (List[Tuple[int]]): list of normalization values for the reconstructed image
+            header (nib.Nifti1Header): header of the input image
+            num_batches (int): number of batches to divide the input tensor into
+
+        Returns:
+            torch.Tensor: reconstructed harmonized image
+        """
         if out_paths is not None:
             for out_path in out_paths:
                 os.makedirs(out_path.parent, exist_ok=True)
             prefix = str(out_paths[0].name).split('.')[0]
         
-
+        # set everything to an eval mode and turn off the gradient
         with torch.set_grad_enabled(False):
             self.beta_encoder.eval()
             self.theta_encoder.eval()
             self.eta_encoder.eval()
             self.decoder.eval()
 
-            # === 1. CALCULATE BETA, THETA, ETA FROM SOURCE IMAGES ===
+            # Calculate the masks, logits, betas, and keys for the source images
             logits, betas, keys, masks = [], [], [], []
             for source_image in source_images:
                 source_image = source_image.unsqueeze(1)
@@ -106,7 +123,7 @@ class HAIL:
                 betas.append(torch.cat(beta_tmp, dim=0))
                 keys.append(torch.cat(key_tmp, dim=0))
 
-            # === 2. CALCULATE THETA, ETA FOR TARGET IMAGES (IF NEEDED) ===
+            # calculate the harmonized theta and eta from the target images
             if target_theta is None:
                 queries, thetas_target = [], []
                 for target_image in target_images:
@@ -124,7 +141,7 @@ class HAIL:
                     queries.append(torch.cat([target_theta_tmp.view(1, self.theta_dim, 1).to(self.device),
                                               target_eta_tmp.view(1, self.eta_dim, 1).to(self.device)], dim=1))
 
-            # ===4. DECODING===
+            # decode the harmonized normal val  image
             for tid, (theta_target, query, norm_val) in enumerate(zip(thetas_target, queries, norm_vals)):
                 if out_paths is not None:
                     out_prefix = out_paths[tid].name.replace('.nii.gz', '')
@@ -152,8 +169,7 @@ class HAIL:
                 logit_fusion = torch.cat(logit_fusion, dim=0)
                 attention = torch.cat(attention, dim=0)
 
-                # ===5. SAVE INTERMEDIATE RESULTS (IF REQUESTED)===
-                # harmonized image
+                # save the harmonized image
                 print('recon_orient', recon_orientation)
                 if header is not None:
                     if recon_orientation == "axial":
@@ -161,6 +177,8 @@ class HAIL:
                     else:
                         raise NotImplementedError('Only axial orientation is supported')
                     
+                    # put the image back to the original shape
+                    # put the image back to original harmonized intensity
                     img_save = self.clipper(img_save[112 - 96:112 + 96, :, 112 - 96:112 + 96]* norm_val[0], norm_val[1])
                     img_save = nib.Nifti1Image(img_save, None,
                                                header)
@@ -171,5 +189,14 @@ class HAIL:
         if header is None:
             return rec_image.cpu().squeeze()
 
-    def clipper(self, rec_image,norm_val):
+    def clipper(self, rec_image: np.ndarray, norm_val: float) -> np.ndarray:
+        """ Clip the image to the valid intensity
+
+        Args:
+            rec_image (np.ndarray): harmonized image
+            norm_val (float ): normalization value to be clipped to
+
+        Returns:
+            np.ndarray : clipped image
+        """
         return  np.clip(rec_image, 0, norm_val)

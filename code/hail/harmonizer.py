@@ -1,6 +1,7 @@
 import sys
 import argparse
 from pathlib import Path
+from os import PathLike
 
 import nibabel as nib
 import numpy as np
@@ -12,9 +13,21 @@ from skimage.morphology import isotropic_closing
 
 from model import HAIL
 from utils import crop, zero_pad, zero_pad2d, crop2d
+from typing import List, Tuple
 
+"""
+The harmonizer module is used to harmonize the images across different imaging locations 
+"""
 
-def background_removal(image_vol):
+def background_removal(image_vol: np.ndarray)-> np.ndarray:
+    """remove background from the head using otsu threhold for MRI
+
+    Args:
+        image_vol (np.ndarray): brain 3D image volume
+
+    Returns:
+        np.ndarray: background removed 3D image volume
+    """
     [n_row, n_col, n_slc] = image_vol.shape
     thresh = threshold_otsu(image_vol)
     mask = (image_vol >= thresh) * 1.0
@@ -24,7 +37,15 @@ def background_removal(image_vol):
     image_vol[mask < 1e-4] = 0.0
     return image_vol
 
-def background_removal2d(image_vol):
+def background_removal2d(image_vol: np.ndarray) -> : np.ndarray:
+    """remove background from the head using otsu threhold for MRI
+
+    Args:
+        image_vol (np.ndarray): brain 2D slice
+
+    Returns:
+        np.ndarray: background removed 2D slice
+    """
     [n_row, n_col] = image_vol.shape
     thresh = threshold_otsu(image_vol)
     mask = (image_vol >= thresh) * 1.0
@@ -34,7 +55,17 @@ def background_removal2d(image_vol):
     image_vol[mask < 1e-4] = 0.0
     return image_vol
 
-def obtain_single_image(image_path, bg_removal=True, a_max=5.0):
+def obtain_single_image(image_path: Pathlike, bg_removal: bool=True, a_max:float=5.0)--> Tuple[torch.Tensor, nib.Nifti1Header, Tuple[float, float]]:
+    """get a single image from a NifTi file, and preprocess it for harmonization
+
+    Args:
+        image_path (Pathlike): path to the NifTi file
+        bg_removal (bool, optional): remove background from the image. Defaults to True.
+        a_max (float, optional): maximum value for the image. Defaults to 5.0.
+
+    Returns:
+        Tuple[torch.Tensor, nib.Nifti1Header, Tuple[float, float]]: preprocessed image, image header, and normalization values
+    """
     image_obj = nib.Nifti1Image.from_filename(image_path)
     image_vol = np.array(image_obj.get_fdata().astype(np.float32))
     thresh = np.percentile(image_vol.flatten(), 95)
@@ -52,7 +83,17 @@ def obtain_single_image(image_path, bg_removal=True, a_max=5.0):
                  112 - n_slc // 2:112 + n_slc // 2 + n_slc % 2] = image_vol
     return ToTensor()(image_padded), image_obj.header, (thresh, max_thresh)
 
-def load_source_images(image_paths, bg_removal=True):
+def load_source_images(image_paths:List[Pathlike], bg_removal:bool =True)--> Tuple[List[torch.Tensor], nib.Nifti1Header]:
+    """ Load all the source images from the list of paths
+
+    Args:
+        image_paths (List[Pathlike]): list of paths to the images
+        bg_removal (bool, optional): remove background from the image. Defaults to True.
+
+    Returns:
+        Tuple[List[torch.Tensor], nib.Nifti1Header]: list of preprocessed images and the image header
+    """
+    
     source_images = []
     image_header = None
     for image_path in image_paths:
@@ -62,7 +103,10 @@ def load_source_images(image_paths, bg_removal=True):
 
 
 if __name__ == '__main__':
-    #args = sys.argv[1:] if args is None else args
+    """
+    python harmonizer.py --in-path /path/to/image1.nii.gz /path/to/image2.nii.gz --target-image /path/to/target_image.nii.gz --out-path /path/to/output.nii.gz
+    
+    """
     parser = argparse.ArgumentParser(description='Harmonization Across Imaging Location(HAIL)')
     parser.add_argument('--in-path', type=Path, action='append', required=True)
     parser.add_argument('--target-image', type=Path, action='append', default=[])
@@ -76,13 +120,12 @@ if __name__ == '__main__':
     parser.add_argument('--num-batches', type=int, default=1)
 
     args = parser.parse_args()
-    #args = parser.parse_args(args)
     print(args)
 
     text_div = '=' * 10
     print(f'{text_div} BEGIN HARMONIZATION {text_div}')
 
-    # ==== GET ABSOLUTE PATHS ====
+    # get all the absolute paths
     for argname in ['in_path', 'target_image', 'out_path', 'harmonization_model',
                     'fusion_model']:
         if isinstance(getattr(args, argname), list):
@@ -92,33 +135,31 @@ if __name__ == '__main__':
 
 
     print(args)
-    # ==== INITIALIZE MODEL ====
+    # initialize the HAIL model
     hail = HAIL(beta_dim=args.beta_dim,
                   theta_dim=args.theta_dim,
                   eta_dim=2,
                   pretrained=args.harmonization_model,
                   gpu_id=args.gpu_id)
 
-    # ==== LOAD SOURCE IMAGES ====
+    # load source images
     source_images, image_header = load_source_images(args.in_path, args.bg_removal)
 
-    # ==== LOAD TARGET IMAGES IF PROVIDED ====
-   
+    # load target template teams
     target_images, norm_vals = [], []
     for target_image_path, out_path in zip(args.target_image, args.out_path):
         target_image_tmp, tmp_header, norm_val = obtain_single_image(target_image_path, args.bg_removal, a_max=6.0)
         target_images.append(target_image_tmp.permute(2, 1, 0).permute(0, 2, 1).flip(1)[100:120, ...])
         norm_vals.append(norm_val)
 
-    target_theta = None
-    target_eta = None
+
     
-    # ===== BEGIN HARMONIZATION=====
+    # begin the harmonization process to generate the harmonized image in a axial fashion
     hail.harmonize(
         source_images=[image.permute(2, 0, 1) for image in source_images],
         target_images=target_images,
-        target_theta=target_theta,
-        target_eta=target_eta,
+        target_theta=None,
+        target_eta=None,
         out_paths=args.out_path,
         header=image_header,
         recon_orientation='axial',
