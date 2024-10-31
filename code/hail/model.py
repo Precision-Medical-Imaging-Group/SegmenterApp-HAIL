@@ -62,7 +62,7 @@ class HAIL:
 
         """
         
-        batch_size, image_dim = beta_onehot_encode.shape[0], beta_onehot_encode.shape[0:]
+        batch_size, image_dim = beta_onehot_encode.shape[0], beta_onehot_encode.shape[3]
         value_tensor = (torch.arange(0, self.beta_dim) * 1.0).to(self.device)
         value_tensor = value_tensor.view(1, self.beta_dim, 1, 1).repeat(batch_size, 1, image_dim, image_dim)
         beta_label_encode = beta_onehot_encode * value_tensor.detach()
@@ -70,7 +70,7 @@ class HAIL:
 
 
     def harmonize(self, source_images, target_images, target_theta, target_eta, out_paths,
-                  recon_orientation, norm_vals, header=None, num_batches=4) --> [torch.Tensor | None]:
+                  recon_orientation, norm_vals, header=None, num_batches=4) -> [torch.Tensor | None]:
         """
          The main hamronization function that harmonizes the source images to the target images.
 

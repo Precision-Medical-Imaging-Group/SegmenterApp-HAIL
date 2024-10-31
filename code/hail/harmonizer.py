@@ -37,7 +37,7 @@ def background_removal(image_vol: np.ndarray)-> np.ndarray:
     image_vol[mask < 1e-4] = 0.0
     return image_vol
 
-def background_removal2d(image_vol: np.ndarray) -> : np.ndarray:
+def background_removal2d(image_vol: np.ndarray) ->  np.ndarray:
     """remove background from the head using otsu threhold for MRI
 
     Args:
@@ -55,7 +55,7 @@ def background_removal2d(image_vol: np.ndarray) -> : np.ndarray:
     image_vol[mask < 1e-4] = 0.0
     return image_vol
 
-def obtain_single_image(image_path: Pathlike, bg_removal: bool=True, a_max:float=5.0)--> Tuple[torch.Tensor, nib.Nifti1Header, Tuple[float, float]]:
+def obtain_single_image(image_path: PathLike, bg_removal: bool=True, a_max:float=5.0) -> Tuple[torch.Tensor, nib.Nifti1Header, Tuple[float, float]]:
     """get a single image from a NifTi file, and preprocess it for harmonization
 
     Args:
@@ -83,7 +83,7 @@ def obtain_single_image(image_path: Pathlike, bg_removal: bool=True, a_max:float
                  112 - n_slc // 2:112 + n_slc // 2 + n_slc % 2] = image_vol
     return ToTensor()(image_padded), image_obj.header, (thresh, max_thresh)
 
-def load_source_images(image_paths:List[Pathlike], bg_removal:bool =True)--> Tuple[List[torch.Tensor], nib.Nifti1Header]:
+def load_source_images(image_paths:List[PathLike], bg_removal:bool =True) -> Tuple[List[torch.Tensor], nib.Nifti1Header]:
     """ Load all the source images from the list of paths
 
     Args:
