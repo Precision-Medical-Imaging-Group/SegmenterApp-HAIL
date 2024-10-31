@@ -70,14 +70,12 @@ class HAIL:
 
 
     def harmonize(self, source_images, target_images, target_theta, target_eta, out_paths,
-                  recon_orientation, norm_vals, header=None, num_batches=4, save_intermediate=False, intermediate_out_dir=None):
+                  recon_orientation, norm_vals, header=None, num_batches=4):
         if out_paths is not None:
             for out_path in out_paths:
                 os.makedirs(out_path.parent, exist_ok=True)
             prefix = str(out_paths[0].name).split('.')[0]
         
-        if save_intermediate:
-            os.makedirs(intermediate_out_dir, exist_ok=True)
 
         with torch.set_grad_enabled(False):
             self.beta_encoder.eval()
@@ -119,49 +117,12 @@ class HAIL:
                     thetas_target.append(theta_target)
                     queries.append(
                         torch.cat([theta_target, eta_target], dim=1).view(1, self.theta_dim + self.eta_dim, 1))
-                if save_intermediate:
-                    # save theta and eta of target images
-                    with open(intermediate_out_dir / f'{prefix}_targets.txt', 'w') as fp:
-                        fp.write(','.join(['img'] + [f'theta{i}' for i in range(self.theta_dim)] +
-                                          [f'eta{i}' for i in range(self.eta_dim)]) + '\n')
-                        for i, img_query in enumerate([query.squeeze().cpu().numpy().tolist() for query in queries]):
-                            fp.write(','.join([f'target{i}'] + ['%.6f' % val for val in img_query]) + '\n')
             else:
                 queries, thetas_target = [], []
                 for target_theta_tmp, target_eta_tmp in zip(target_theta, target_eta):
                     thetas_target.append(target_theta_tmp.view(1, self.theta_dim, 1, 1).to(self.device))
                     queries.append(torch.cat([target_theta_tmp.view(1, self.theta_dim, 1).to(self.device),
                                               target_eta_tmp.view(1, self.eta_dim, 1).to(self.device)], dim=1))
-
-            # === 3. SAVE ENCODED VARIABLES (IF REQUESTED) ===
-            if save_intermediate and header is not None:
-                if recon_orientation == 'axial':
-                    # 3a. source images
-                    for i, source_img in enumerate(source_images):
-                        img_save = source_img.squeeze().permute(1, 2, 0).permute(1, 0, 2).cpu().numpy()
-                        img_save = img_save[112 - 96:112 + 96, :, 112 - 96:112 + 96]
-                        nib.Nifti1Image(img_save, None, header).to_filename(
-                            intermediate_out_dir / f'{prefix}_source{i}.nii.gz'
-                        )
-                    # 3b. beta images
-                    beta = torch.stack(betas, dim=-1)
-                    if len(beta.shape) > 4:
-                        beta = beta.squeeze()
-                    beta = beta.permute(1, 2, 0, 3).permute(1, 0, 2, 3).cpu().numpy()
-                    img_save = nib.Nifti1Image(beta[112 - 96:112 + 96, :, 112 - 96:112 + 96, :], None, header)
-                    file_name = intermediate_out_dir / f'{prefix}_source_betas.nii.gz'
-                    nib.save(img_save, file_name)
-                    # 3c. theta/eta values
-                    with open(intermediate_out_dir / f'{prefix}_sources.txt', 'w') as fp:
-                        fp.write(','.join(['img', 'slice'] + [f'theta{i}' for i in range(self.theta_dim)] +
-                                          [f'eta{i}' for i in range(self.eta_dim)]) + '\n')
-                        for i, img_key in enumerate([key.squeeze().cpu().numpy().tolist() for key in keys]):
-                            for j, slice_key in enumerate(img_key):
-                                fp.write(','.join([f'source{i}', f'slice{j:03d}'] +
-                                                  ['%.6f' % val for val in slice_key]) + '\n')
-                                
-                else:
-                    raise NotImplementedError('Only axial orientation is supported')
 
             # ===4. DECODING===
             for tid, (theta_target, query, norm_val) in enumerate(zip(thetas_target, queries, norm_vals)):
@@ -193,38 +154,22 @@ class HAIL:
 
                 # ===5. SAVE INTERMEDIATE RESULTS (IF REQUESTED)===
                 # harmonized image
+                print('recon_orient', recon_orientation)
                 if header is not None:
                     if recon_orientation == "axial":
                         img_save = np.array(rec_image.cpu().squeeze().permute(1, 2, 0).permute(1, 0, 2))
                     else:
                         raise NotImplementedError('Only axial orientation is supported')
-                    img_save = nib.Nifti1Image((img_save[112 - 96:112 + 96, :, 112 - 96:112 + 96]) * norm_val, None,
+                    
+                    img_save = self.clipper(img_save[112 - 96:112 + 96, :, 112 - 96:112 + 96]* norm_val[0], norm_val[1])
+                    img_save = nib.Nifti1Image(img_save, None,
                                                header)
                     file_name = out_path.parent / f'{out_prefix}_harmonized_{recon_orientation}.nii.gz'
                     nib.save(img_save, file_name)
 
-                if save_intermediate and header is not None:
-                    
-                    if recon_orientation == 'axial':
-                        # 5a. beta fusion
-                        img_save = beta_fusion.squeeze().permute(1, 2, 0).permute(1, 0, 2).cpu().numpy()
-                        img_save = nib.Nifti1Image(img_save[112 - 96:112 + 96, :, 112 - 96:112 + 96], None, header)
-                        file_name = intermediate_out_dir / f'{out_prefix}_beta_fusion.nii.gz'
-                        nib.save(img_save, file_name)
-
-                        # 5b. logit fusion
-                        img_save = logit_fusion.permute(2, 3, 0, 1).permute(1, 0, 2, 3).cpu().numpy()
-                        img_save = nib.Nifti1Image(img_save[112 - 96:112 + 96, :, 112 - 96:112 + 96, :], None, header)
-                        file_name = intermediate_out_dir / f'{out_prefix}_logit_fusion.nii.gz'
-                        nib.save(img_save, file_name)
-                        
-                        # 5c. attention
-                        img_save = attention.permute(2, 3, 0, 1).permute(1, 0, 2, 3).cpu().numpy()
-                        img_save = nib.Nifti1Image(img_save[112 - 96:112 + 96, :, 112 - 96:112 + 96], None, header)
-                        file_name = intermediate_out_dir / f'{out_prefix}_attention.nii.gz'
-                        nib.save(img_save, file_name)
-                    else:
-                        raise NotImplementedError('Only axial orientation is supported')
 
         if header is None:
             return rec_image.cpu().squeeze()
+
+    def clipper(self, rec_image,norm_val):
+        return  np.clip(rec_image, 0, norm_val)

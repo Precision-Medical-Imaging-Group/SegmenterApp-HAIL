@@ -34,12 +34,13 @@ def background_removal2d(image_vol):
     image_vol[mask < 1e-4] = 0.0
     return image_vol
 
-def obtain_single_image(image_path, bg_removal=True):
+def obtain_single_image(image_path, bg_removal=True, a_max=5.0):
     image_obj = nib.Nifti1Image.from_filename(image_path)
     image_vol = np.array(image_obj.get_fdata().astype(np.float32))
     thresh = np.percentile(image_vol.flatten(), 95)
+    max_thresh = image_vol.max()
     image_vol = image_vol / (thresh + 1e-5)
-    image_vol = np.clip(image_vol, a_min=0.0, a_max=5.0)
+    image_vol = np.clip(image_vol, a_min=0.0, a_max=a_max)
     if bg_removal:
         image_vol = background_removal(image_vol)
 
@@ -49,7 +50,7 @@ def obtain_single_image(image_path, bg_removal=True):
     image_padded[112 - n_row // 2:112 + n_row // 2 + n_row % 2,
                  112 - n_col // 2:112 + n_col // 2 + n_col % 2,
                  112 - n_slc // 2:112 + n_slc // 2 + n_slc % 2] = image_vol
-    return ToTensor()(image_padded), image_obj.header, thresh
+    return ToTensor()(image_padded), image_obj.header, (thresh, max_thresh)
 
 def load_source_images(image_paths, bg_removal=True):
     source_images = []
@@ -70,11 +71,9 @@ if __name__ == '__main__':
     parser.add_argument('--fusion-model', type=Path, default=Path('/tmp/model_weights/fusion.pt'))
     parser.add_argument('--beta-dim', type=int, default=5)
     parser.add_argument('--theta-dim', type=int, default=2)
-    parser.add_argument('--save-intermediate', action='store_true', default=False)
-    parser.add_argument('--intermediate-out-dir', type=Path, default=Path.cwd())
     parser.add_argument('--no-bg-removal', dest='bg_removal', action='store_false', default=True)
     parser.add_argument('--gpu-id', type=int, default=0)
-    parser.add_argument('--num-batches', type=int, default=4)
+    parser.add_argument('--num-batches', type=int, default=1)
 
     args = parser.parse_args()
     #args = parser.parse_args(args)
@@ -85,15 +84,14 @@ if __name__ == '__main__':
 
     # ==== GET ABSOLUTE PATHS ====
     for argname in ['in_path', 'target_image', 'out_path', 'harmonization_model',
-                    'fusion_model', 'intermediate_out_dir']:
+                    'fusion_model']:
         if isinstance(getattr(args, argname), list):
             setattr(args, argname, [path.resolve() for path in getattr(args, argname)])
         else:
             setattr(args, argname, getattr(args, argname).resolve())
 
-    if args.save_intermediate:
-        mkdir_p(args.intermediate_out_dir)
 
+    print(args)
     # ==== INITIALIZE MODEL ====
     hail = HAIL(beta_dim=args.beta_dim,
                   theta_dim=args.theta_dim,
@@ -108,21 +106,10 @@ if __name__ == '__main__':
    
     target_images, norm_vals = [], []
     for target_image_path, out_path in zip(args.target_image, args.out_path):
-        target_image_tmp, tmp_header, norm_val = obtain_single_image(target_image_path, args.bg_removal)
+        target_image_tmp, tmp_header, norm_val = obtain_single_image(target_image_path, args.bg_removal, a_max=6.0)
         target_images.append(target_image_tmp.permute(2, 1, 0).permute(0, 2, 1).flip(1)[100:120, ...])
         norm_vals.append(norm_val)
-        if args.save_intermediate:
-            out_prefix = out_path.name.replace('.nii.gz', '')
-            save_img = target_image_tmp.permute(1, 2, 0).numpy()[112 - 96:112 + 96, :, 112 - 96:112 + 96]
-            target_obj = nib.Nifti1Image(save_img * norm_val, None, tmp_header)
-            target_obj.to_filename(args.intermediate_out_dir / f'{out_prefix}_target.nii.gz')
-    if args.save_intermediate:
-        out_prefix = args.out_path[0].name.replace('.nii.gz', '')
-        with open(args.intermediate_out_dir / f'{out_prefix}_targetnorms.txt', 'w') as fp:
-            fp.write('image,norm_val\n')
-            for i, norm_val in enumerate(norm_vals):
-                fp.write(f'{i},{norm_val:.6f}\n')
-        np.savetxt(args.intermediate_out_dir / f'{out_prefix}_targetnorms.txt', norm_vals)
+
     target_theta = None
     target_eta = None
     
@@ -137,7 +124,5 @@ if __name__ == '__main__':
         recon_orientation='axial',
         norm_vals=norm_vals,
         num_batches=args.num_batches,
-        save_intermediate=args.save_intermediate,
-        intermediate_out_dir=args.intermediate_out_dir,
     )
     print(f'{text_div} END HARMONIZATION {text_div}')
