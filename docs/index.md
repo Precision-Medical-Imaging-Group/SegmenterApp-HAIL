@@ -4,25 +4,25 @@ layout: default
 
 **I have read the instructions and agree with the terms.** [Return to the application](https://hail.hope4kids.io/).
 
-The **Brain Harmonzation Tool (HAIL)** is a free, open-source web-based application
+The **Brain Harmonization Tool (HAIL)** is a free, open-source web-based application
 designed at [Children's National Hospital](https://www.childrensnational.org/) 
 for the harmonization of brain magnetic resonance imaging (MRI). 
-Developed in Python, this software aims to be used as preprocssing tool to provide precise quantitative analysis of brain MRI, to support clinical decision-making in diagnosis and prognosis.  
+Developed in Python, this software aims to be used as a preprocssing tool to provide precise quantitative analysis of brain MRI and support clinical decision-making in diagnosis and prognosis.  
 
 # Usage
 
-This software currently functions on the the t1 MRI sequences: native pre-contrast T1-weighted (t1n) and  
-contrast enhanced T1-weighted (t1c). These sequences should be 
+This software currently functions on the t1 MRI sequences: native pre-contrast T1-weighted (t1n) and  
+contrast-enhanced T1-weighted (t1c). These sequences should be 
 uploaded in NIfTI format (*i.e.*, **.nii.gz**). Before uploading, 
 we strongly recommend performing **de-identification** to remove any protected 
 health information, including **defacing** if necessary. 
 
 **Pre-processing** in the harmonization is under development. At this time, 
-we expect users to  resample the inputs to isotropic 1 mm resolution of 192x224x192.  
+we expect users to  resample the inputs to an isotropic 1 mm resolution of 192x224x192.  
 
 Once the MRI sequences are uploaded, select the uploaded modality from the dropdown and click the **Start Harmonization** button. 
 The process typically takes around 8 minutes. Afterward, the MRI 
-sequence before and after harmonization is visualized on axial, coronal and sagittal views using the interactive **Sliders**. Harmonization results can be downloaded in 
+sequence before and after harmonization is visualized on axial, coronal, and sagittal views using the interactive **Sliders**. Harmonization results can be downloaded in 
 NIfTI format by clicking the **Download Harmonized File** button.  
 
 For **demonstration** purposes, we provide sample cases at the bottom of the page. 
@@ -30,9 +30,9 @@ Select one and click the **Start Harmonization** button to see how the software 
 
 # Source Code
 
-The current version of the software is ![v1.0](https://img.shields.io/badge/v1.0-brightgreen) 
+The current version of the software is![v1.0](https://img.shields.io/badge/v1.0-brightgreen) 
 and the source code is publicly available on GitHub 
-([code](https://github.com/Precision-Medical-Imaging-Group/SegmenterApp-HAIL)) 
+([code](https://github.com/Precision-Medical-Imaging-Group/SegmenterApp-HAIL) and [docs](https://github.com/Precision-Medical-Imaging-Group/SegmenterApp-HAIL/hail.html)) 
 under license [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
 
 The software is developed and maintained by the [Precision Medical Imaging](https://research.childrensnational.org/labs/precision-medical) lab
