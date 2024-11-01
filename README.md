@@ -9,7 +9,7 @@ To run the algorithm using a docker  container on your local data follow the ste
 
 ## Online Segmenter
 
-The online no-installation segmenter web app is available at [hail.hope4kids.io](https://hail.hope4kids.io/).
+The online no-installation harmonization web app is available at [hail.hope4kids.io](https://hail.hope4kids.io/).
 
 ## Citations
 
