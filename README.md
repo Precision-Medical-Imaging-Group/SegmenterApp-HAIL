@@ -1,5 +1,9 @@
 # Neural Network-Based Pediatric Brain MR-T1 Harmonization
-[Code Documentation](https://docs.hope4kids.io/SegmenterApp-HAIL/hail.html)
+<a href="https://docs.hope4kids.io/HOPE-Platform/"><img src="https://img.shields.io/badge/HOPE%20Platform-green.svg"/></a>
+<a href="https://hail.hope4kids.io/"><img src="https://img.shields.io/badge/Web%20App-orange.svg"/></a>
+<a href="https://docs.hope4kids.io/SegmenterApp-HAIL/"><img src="https://img.shields.io/badge/Web%20Manual-yellow.svg"/></a>
+<a href="https://hub.docker.com/repository/docker/aparida12/hail2024"><img src="https://img.shields.io/badge/Docker-gray.svg"/></a>
+<a href="https://docs.hope4kids.io/SegmenterApp-HAIL/hail.html"><img src="https://img.shields.io/badge/Code%20Documentation-blue.svg"/></a>
 
 <img alt="Example Screenshot" src="https://raw.githubusercontent.com/Precision-Medical-Imaging-Group/SegmenterApp-HAIL/refs/heads/main/docs/assets/img/HarmonizationExample.png"  height="600">
 
