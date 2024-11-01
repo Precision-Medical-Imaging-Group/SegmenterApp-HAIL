@@ -27,8 +27,7 @@ jobs:
       - name: Build Doc ✅
         run: |
           pip install pdoc
-          cd code 
-          pdoc -o ../build ./hail
+          PYTHONPATH=code/hail pdoc -o build ./code/hail
       
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4

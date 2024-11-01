@@ -221,7 +221,7 @@ with gr.Blocks() as demo:
     example_list = [
                     [example_dir+'reg_loving_euler.nii.gz', example_dir+'reg_peaceful_yalow.nii.gz', 'native T1'],
                     [example_dir+'reg_peaceful_yalow.nii.gz', example_dir+'reg_loving_euler.nii.gz', 'native T1'],
-                    [example_dir+'reg_practical_ellis.nii.gz', example_dir+'reg_peaceful_yalow.nii.gz', 'native T1'],
+                    #[example_dir+'reg_practical_ellis.nii.gz', example_dir+'reg_peaceful_yalow.nii.gz', 'native T1'],
                     # [example_dir+'reg_peaceful_yalow.nii.gz', example_dir+'tmp_peaceful_yalow.nii.gz', 'native T1'],
                     # [example_dir+'reg_practical_ellis.nii.gz', example_dir+'tmp_practical_ellis.nii.gz', 'native T1']
                     ]
