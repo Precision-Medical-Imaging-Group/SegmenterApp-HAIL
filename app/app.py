@@ -165,8 +165,8 @@ with gr.Blocks() as demo:
     gr.HTML(value=f"<justify><font size='4'> Welcome to the brain MRI harmonizer HAIL. Please read the <a href='https://precision-medical-imaging-group.github.io/SegmenterApp-HAIL/'>instructions</a> before using the application. </font></justify>")
     with gr.Row():
  
-        image_t1 = gr.File(label="upload t1 image to be harmonized:", file_types=["nii.gz"])
-        image_template = gr.File(label="upload t1 template image:", file_types=["nii.gz"])
+        image_t1 = gr.File(label="upload t1 image to be harmonized:", file_types=[".gz"])
+        image_template = gr.File(label="upload t1 template image:", file_types=[".gz"])
 
     with gr.Row():
         with gr.Column():
@@ -217,7 +217,7 @@ with gr.Blocks() as demo:
         slider_sagittal = gr.Slider(0, 155, step=1) # max val needs to be updated by user.
         state_sagittal = gr.State(value=75)
 
-    example_dir = '/home/pmilab/Abhijeet/harm_test_inp/'
+    example_dir = './harm_test_inp/'
     example_list = [
                     [example_dir+'reg_loving_euler.nii.gz', example_dir+'reg_peaceful_yalow.nii.gz', 'native T1'],
                     [example_dir+'reg_peaceful_yalow.nii.gz', example_dir+'reg_loving_euler.nii.gz', 'native T1'],
